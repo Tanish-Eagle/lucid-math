@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "MathML to Plaintext Converter",
+  "version": "1.0",
+  "description": "Converts MathML content to plaintext for accessibility.",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "converter.js",
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icon.png"
+  }
+}
