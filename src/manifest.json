@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "MathML to Plaintext Converter",
-  "version": "1.0",
+  "name": "Lucid Math",
+  "version": "v0.9.0",
   "description": "Converts MathML content to plaintext for accessibility.",
   "permissions": [],
   "content_scripts": [
