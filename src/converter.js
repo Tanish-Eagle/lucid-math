@@ -43,19 +43,19 @@ function handleMsqrt(node) {
   return `√${inner}`;
 }
 
-function handleMroot(node) {
-  if (node.childNodes.length === 2) {
-    const base = convertMathML(node.childNodes[0]);
-    const index = convertMathML(node.childNodes[1]);
-    const superscripts = {
-      "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
-      "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
-    };
-    const sup = [...index].map(c => superscripts[c] || c).join("");
-    return `${sup}√${base}`;
-  }
-  return "";
-}
+// function handleMroot(node) {
+//   if (node.childNodes.length === 2) {
+//     const base = convertMathML(node.childNodes[0]);
+//     const index = convertMathML(node.childNodes[1]);
+//     const superscripts = {
+//       "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+//       "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
+//     };
+//     const sup = [...index].map(c => superscripts[c] || c).join("");
+//     return `${sup}√${base}`;
+//   }
+//   return "";
+// }
 
 // function handleMenclose(node) {
 //   const notation = (node.getAttribute("notation") || "").trim().toLowerCase();
@@ -69,6 +69,34 @@ function handleMroot(node) {
 
 //   return `[enclosed: ${inner}]`;
 // }
+
+function handleMroot(node) {
+  // Get only element children
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length === 2) {
+    const base = convertMathML(elements[0]);
+    const index = convertMathML(elements[1]).trim();
+
+    const superscripts = {
+      "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+      "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
+    };
+
+    // Decide format based on single or multiple digits
+    if (/^\d$/.test(index)) {
+      // Single digit → superscript
+      const sup = superscripts[index] || index;
+      return `${sup}√(${base})`;
+    } else {
+      // Multi-digit → plain text with "th root of"
+      return `${index}th root of (${base})`;
+    }
+  }
+  return "";
+}
+
 
 function handleMenclose(node) {
   // Get the notation attribute (may be multiple space-separated values)
