@@ -227,6 +227,10 @@ function handleMathGroup(node) {
   return result.trim();
 }
 
+function handleVisualTags() {
+  return "";
+}
+
 function preprocessMathML(raw) {
   return raw
     .replace(/&le;/g, '≤')
@@ -460,18 +464,22 @@ function convertMathML(node) {
   //   return `[enclosed: ${inner}]`;
   // }
 
-  if (tag === "mspace") {
-    // Purely visual spacing; skip it.
-    return "";
-  }
+  // if (tag === "mspace") {
+  //   // Purely visual spacing; skip it.
+  //   return "";
+  // }
   if (tag === "mstyle") {
     // Skip visual styling and process its children normally
     return Array.from(node.childNodes).map(convertMathML).join(" ");
   }
 
-  if (tag === "mphantom") {
-    // Purely visual, skip its contents entirely
-    return "";
+  // if (tag === "mphantom") {
+  //   // Purely visual, skip its contents entirely
+  //   return "";
+  // }
+
+  if (tag === "mspace" || tag === "mphantom") {
+    return handleVisualTags();
   }
 
   if (tag === "mover") {
