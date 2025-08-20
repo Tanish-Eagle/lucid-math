@@ -1,0 +1,20 @@
+{
+  "name": "lucid-math",
+  "version": "1.0.0",
+  "description": "Transform MathML on the web into plaintext, readable form for screen readers.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tanish-Eagle/lucid-math.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tanish-Eagle/lucid-math/issues"
+  },
+  "homepage": "https://github.com/Tanish-Eagle/lucid-math#readme"
+}
