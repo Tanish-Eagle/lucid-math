@@ -129,7 +129,9 @@ function handleMtable(node) {
     .filter(Boolean)
     .join("\n");
 }
+
 // mtr tag handler
+
 function handleMtr(node) {
   const content = Array.from(node.children)
     .map(convertMathML)
@@ -164,7 +166,7 @@ function handleMo(node) {
   // Ignore invisible times (U+2062)
   if (text === "\u2062") return "";
 
-  return moSpacedSymbols.has(text) ? ` ${text} ` : text;
+  return moSpacedSymbols.has(text) ? `${text}` : text;
 }
 
 function getMathToken(node) {
@@ -215,7 +217,7 @@ function preprocessMathML(raw) {
     .replace(/&amp;/g, '&');
 }
 
-function convertMathML(node) {
+export function convertMathML(node) {
   console.log("🔧 Converting:", node);
   if (!node.localName) {
     return node.textContent?.trim() || "";
