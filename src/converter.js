@@ -1,5 +1,246 @@
 // converter.js
 
+const structuralMoSymbols = new Set(["(", ")", "|"]);
+
+const moSpacedSymbols = new Set(["+", "−", "×", "÷", "-", "=", "|", "<", ">", "≤", "≥", "≠"]);
+
+function wrapIfMrow(node, content) {
+  if (node.localName === "mrow") {
+    return `(${content})`;
+  }
+  return content; // ✅ fallback for non-mrow
+}
+
+function normalizeMo(node) {
+  const text = node.textContent?.trim() || "";
+
+  // Parentheses → keep them as-is
+  if (text === "(" || text === ")") {
+    return text;
+  }
+
+  // Absolute value bars → special case
+  if (text === "|") {
+    return "|";
+  }
+
+  // Everything else → just return
+  return text;
+}
+
+function hasOperators(node) {
+  return node?.nodeName === "mrow" && Array.from(node.childNodes).some(child => {
+    return child.nodeName === "mo" && /[+\-×÷=<>≤≥≠]/.test(child.textContent);
+  });
+}
+
+function handleMfrac(node) {
+  console.log("🔢 Entered <mfrac>", node.childNodes);
+  const elements = Array.from(node.children);
+  if (elements.length !== 2) {
+    console.warn("⚠️ <mfrac> does not have exactly 2 element children.", elements);
+    return "";
+  }
+  const numNode = elements[0];
+  const denNode = elements[1];
+  const num = convertMathML(numNode);
+  const den = convertMathML(denNode);
+  console.log(" ➕ Numerator:", num);
+  console.log(" ➗ Denominator:", den);
+  const numNeedsParens = num.includes('/') || hasOperators(numNode);
+  const denNeedsParens = den.includes('/') || hasOperators(denNode);
+  const formattedNum = numNeedsParens ? `(${num})` : num;
+  const formattedDen = denNeedsParens ? `(${den})` : den;
+  return `${formattedNum}/${formattedDen}`;
+}
+
+function handleMsup(node) {
+  if (node.childNodes.length !== 2) {
+    console.warn("⚠️ <msup> does not have exactly 2 children.", node);
+    return "";
+  }
+  const base = convertMathML(node.childNodes[0]);
+  const exp = convertMathML(node.childNodes[1]);
+  return `${base}^${exp}`;
+}
+
+function handleMsqrt(node) {
+  const children = Array.from(node.childNodes);
+  const inner = children.map(child => {
+    const converted = convertMathML(child);
+    return wrapIfMrow(child, converted);
+  }).join(" ");
+  return `√${inner}`;
+}
+
+function handleMroot(node) {
+  // Get only element children
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length === 2) {
+    const base = convertMathML(elements[0]);
+    const index = convertMathML(elements[1]).trim();
+
+    // Handle ordinal endings (1st, 2nd, 3rd, 4th, etc.)
+    function ordinal(n) {
+      const num = parseInt(n, 10);
+      if (isNaN(num)) return `${n}th`; // fallback if it's not numeric
+      const tens = num % 100;
+      if (tens >= 11 && tens <= 13) return `${num}th`;
+      switch (num % 10) {
+        case 1: return `${num}st`;
+        case 2: return `${num}nd`;
+        case 3: return `${num}rd`;
+        default: return `${num}th`;
+      }
+    }
+
+    return `${ordinal(index)} root of (${base})`;
+  }
+  return "";
+}
+
+
+function handleMenclose(node) {
+  // Get the notation attribute (may be multiple space-separated values)
+  let notation = node.getAttribute("notation") || "longdiv";
+  let notations = notation.split(/\s+/);
+
+  // Recursively process all child nodes
+  let childText = "";
+  for (let i = 0; i < node.childNodes.length; i++) {
+    childText += convertMathML(node.childNodes[i]);
+  }
+
+  // Wrap or annotate based on notation
+  // (Here we just append text info; you could format differently)
+  let notationText = notations.map(n => {
+    switch (n) {
+      case "longdiv": return `long division of (${childText})`;
+      case "actuarial": return `actuarial symbol for (${childText})`;
+      case "radical": return `square root of (${childText})`;
+      case "box": return `[${childText}]`;
+      case "circle": return `(○${childText}○)`;
+      case "roundedbox": return `(rounded box: ${childText})`;
+      case "top": return `(top overline ${childText})`;
+      case "left": return `(left vertical bar ${childText})`;
+      case "right": return `(right vertical bar ${childText})`;
+      case "bottom": return `(bottom underline ${childText})`;
+      default: return `(${n} ${childText})`;
+    }
+  }).join(" and ");
+
+  return notationText;
+}
+
+function handleMover(node) {
+  const children = Array.from(node.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE);
+  const base = children[0] ? wrapIfMrow(children[0], convertMathML(children[0])) : "";
+  const over = children[1] ? wrapIfMrow(children[1], convertMathML(children[1])) : "";
+
+  return `${base} over ${over}`;
+}
+
+function handleMunder(node) {
+  const baseNode = node.childNodes[0];
+  const underNode = node.childNodes[1];
+
+  const base = baseNode ? wrapIfMrow(baseNode, convertMathML(baseNode)) : "";
+  const under = underNode ? wrapIfMrow(underNode, convertMathML(underNode)) : "";
+
+  if (under.replace(/_/g, "").trim() === "") {
+    return base;
+  }
+  return `${base} under ${under}`;
+}
+
+function handleMtable(node) {
+  return Array.from(node.children)
+    .map(convertMathML)
+    .filter(Boolean)
+    .join("\n");
+}
+
+// mtr tag handler
+
+function handleMtr(node) {
+  const content = Array.from(node.children)
+    .map(convertMathML)
+    .filter(Boolean)
+    .join(" ");
+  return content.trim() ? content : "";
+}
+
+// mtd tag handler
+function handleMtd(node) {
+  return Array.from(node.childNodes)
+    .map(convertMathML)
+    .filter(Boolean)
+    .join(" ");
+}
+
+function handleSemantics(node) {
+  const firstElementChild = Array.from(node.children).find(child => child.nodeType === 1);
+  return firstElementChild ? convertMathML(firstElementChild) : "";
+}
+
+function handleMfenced(node) {
+  const inner = Array.from(node.childNodes).map(convertMathML).join(" ");
+  const open = node.getAttribute("open") || "(";
+  const close = node.getAttribute("close") || ")";
+  return `${open}${inner}${close}`;
+}
+
+function getMathToken(node) {
+  return node.textContent.trim();
+}
+
+function isStructuralMo(node) {
+  if (node.nodeName !== "mo") return false;
+  const text = node.textContent?.trim();
+  if (text === "\u2062") return true; 
+  return structuralMoSymbols.has(text);
+}
+
+// Handle <mo> elements
+function handleMo(node) {
+  if (isStructuralMo(node)) {
+    return node.textContent.trim();
+  }
+  return getMathToken(node);
+}
+
+function handleMathGroup(node) {
+  const children = Array.from(node.childNodes).map(convertMathML).filter(Boolean);
+  let result = "";
+
+  for (let i = 0; i < children.length; i++) {
+    const current = children[i];
+    const next = children[i + 1];
+    result += current;
+
+    if (!next) continue;
+
+    const currentTrim = current.trim();
+    const nextTrim = next.trim();
+
+    // 🚫 No space just inside parentheses or absolute bars
+    if ((currentTrim === "(") || (nextTrim === ")") ||
+      (currentTrim === "|") || (nextTrim === "|")) {
+      continue;
+    }
+
+    // ✅ Otherwise insert space if operator boundaries or for readability
+    result += " ";
+  }
+  return result.trim();
+}
+
+function handleVisualTags() {
+  return "";
+}
+
 function preprocessMathML(raw) {
   return raw
     .replace(/&le;/g, '≤')
@@ -18,197 +259,73 @@ function convertMathML(node) {
 
   const tag = node.localName;
 
-  if (tag === "math" || tag === "mrow") {
-    const children = Array.from(node.childNodes).map(convertMathML).filter(Boolean);
-    let result = "";
+  switch (tag) {
+    case "math":
+    case "mrow":
+      return handleMathGroup(node);
 
-    for (let i = 0; i < children.length; i++) {
-      const current = children[i];
-      const next = children[i + 1];
+    case "mn":
+    case "mi":
+    case "mtext":
+      return getMathToken(node);
 
-      result += current;
+    case "mo":
+      return handleMo(node);
 
-      if (!next) continue; // nothing after this
+    case "msqrt":
+      return handleMsqrt(node);
 
-      const currentTrim = current.trim();
-      const nextTrim = next.trim();
+    case "mroot":
+      return handleMroot(node);
 
-      const currentEndsWithOp = /[+\-×÷=()|<>≤≥≠]$/.test(currentTrim);
-      const nextStartsWithOp = /^[+\-×÷=()|<>≤≥≠]/.test(nextTrim);
+    case "mfrac":
+      return handleMfrac(node);
 
-      // ✅ Simple rule: insert space only if operator or bracket boundaries
-      if (currentEndsWithOp || nextStartsWithOp) {
-        result += " ";
-      }
-      // Else: add space for readability
-      else {
-        result += " ";
-      }
-    }
-    return result.trim();
+    case "mfenced":
+      return handleMfenced(node);
+
+    case "msup":
+      return handleMsup(node);
+
+    case "merror":
+      return "";
+
+    case "semantics":
+      return handleSemantics(node);
+
+    case "mtable":
+      return handleMtable(node);
+
+    case "mtr":
+      return handleMtr(node);
+
+    case "mtd":
+      return handleMtd(node);
+
+    case "munder":
+      return handleMunder(node);
+
+    case "menclose":
+      return handleMenclose(node);
+
+    case "mstyle":
+      // Skip visual styling and process its children normally
+      return Array.from(node.childNodes).map(convertMathML).join(" ");
+
+    case "mspace":
+    case "mphantom":
+      return handleVisualTags();
+
+    case "mover":
+      return handleMover(node);
+
+    default:
+      return `[Unsupported tag: ${tag}]`;
   }
-
-  if (tag === "mn" || tag === "mi" || tag === "mtext") {
-    return node.textContent.trim();
-  }
-
-  if (tag === "mo") {
-    const text = node.textContent.trim();
-
-    // Ignore invisible times (U+2062)
-    if (text === "\u2062") return "";
-
-    const spaced = new Set(["+", "−", "×", "÷", "-", "=", "(", ")", "|", "<", ">", "≤", "≥", "≠"]);
-    return spaced.has(text) ? ` ${text} ` : text;
-  }
-
-  if (tag === "msqrt") {
-    const inner = Array.from(node.childNodes).map(convertMathML).join(" ");
-    return `√${inner}`;
-  }
-
-  if (tag === "mroot") {
-    if (node.childNodes.length === 2) {
-      const base = convertMathML(node.childNodes[0]);
-      const index = convertMathML(node.childNodes[1]);
-      const superscripts = {
-        "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
-        "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
-      };
-      const sup = [...index].map(c => superscripts[c] || c).join("");
-      return `${sup}√${base}`;
-    }
-    return "";
-  }
-
-  if (tag === "mfrac") {
-    console.log("🔢 Entered <mfrac>", node.childNodes);
-    const elements = Array.from(node.children);
-    if (elements.length === 2) {
-      const numNode = elements[0];
-      const denNode = elements[1];
-
-      const num = convertMathML(numNode);
-      const den = convertMathML(denNode);
-      console.log(" ➕ Numerator:", num);
-      console.log(" ➗ Denominator:", den);
-
-      const hasOperators = (n) => {
-        return n?.nodeName === "mrow" && Array.from(n.childNodes).some(child => {
-          return child.nodeName === "mo" && /[+\-×÷=<>≤≥≠]/.test(child.textContent);
-        });
-      };
-
-      const numNeedsParens = num.includes('/') || hasOperators(numNode);
-      const denNeedsParens = den.includes('/') || hasOperators(denNode);
-
-      const formattedNum = numNeedsParens ? `(${num})` : num;
-      const formattedDen = denNeedsParens ? `(${den})` : den;
-
-      return `${formattedNum}/${formattedDen}`;
-    } else {
-      console.warn("⚠️ <mfrac> does not have exactly 2 element children.", elements);
-    }
-    return "";
-  }
-
-  if (tag === "mfenced") {
-    const inner = Array.from(node.childNodes).map(convertMathML).join(" ");
-    const open = node.getAttribute("open") || "(";
-    const close = node.getAttribute("close") || ")";
-    return `${open}${inner}${close}`;
-  }
-
-  if (tag === "msup") {
-    if (node.childNodes.length === 2) {
-      const base = convertMathML(node.childNodes[0]);
-      const exp = convertMathML(node.childNodes[1]);
-      return `${base}^${exp}`;
-    }
-    return "";
-  }
-
-  if (tag === "merror") {
-    return "";
-  }
-
-  if (tag === "semantics") {
-    const firstElementChild = Array.from(node.children).find(child => child.nodeType === 1);
-    return firstElementChild ? convertMathML(firstElementChild) : "";
-  }
-
-  if (tag === "mtable") {
-    return Array.from(node.children)
-      .map(convertMathML)
-      .filter(Boolean)
-      .join("\n");
-  }
-
-  if (tag === "mtr") {
-    const content = Array.from(node.children)
-      .map(convertMathML)
-      .filter(Boolean)
-      .join(" ");
-    return content.trim() ? content : "";
-  }
-
-  if (tag === "mtd") {
-    return Array.from(node.childNodes).map(convertMathML).join(" ");
-  }
-
-  if (tag === "munder") {
-    const base = convertMathML(node.childNodes[0]);
-    const under = convertMathML(node.childNodes[1]);
-
-    if (under.replace(/_/g, "").trim() === "") {
-      return base;
-    }
-
-    return `${base} [under: ${under}]`;
-  }
-
-  if (tag === "menclose") {
-    const notation = node.getAttribute("notation") || "";
-    const inner = Array.from(node.childNodes).map(convertMathML).join(" ");
-
-    if (notation.includes("longdiv")) {
-      return `/(${inner})`;
-    }
-
-    return `[enclosed: ${inner}]`;
-  }
-
-  if (tag === "mspace") {
-    // Purely visual spacing; skip it.
-    return "";
-  }
-  if (tag === "mstyle") {
-    // Skip visual styling and process its children normally
-    return Array.from(node.childNodes).map(convertMathML).join(" ");
-  }
-
-  if (tag === "mphantom") {
-    // Purely visual, skip its contents entirely
-    return "";
-  }
-
-  if (tag === "mover") {
-    const base = convertMathML(node.childNodes[0]);
-    const over = convertMathML(node.childNodes[1]);
-
-    // Simple readable rendering:
-    return `${base} (${over} above)`;
-
-    // Or, if you prefer:
-    // return `${base}^(${over})`;
-
-    // Or even:
-    // return `${over} ${base}`;
-  }
-
-  return `[Unsupported tag: ${tag}]`;
 }
 
 // Expose the functions globally for use in content-script.js
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
+
+export { convertMathML };
