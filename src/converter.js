@@ -1,6 +1,32 @@
 // converter.js
 
-const moSpacedSymbols = new Set(["+", "−", "×", "÷", "-", "=", "(", ")", "|", "<", ">", "≤", "≥", "≠"]);
+const structuralMoSymbols = new Set(["(", ")", "|"]);
+
+const moSpacedSymbols = new Set(["+", "−", "×", "÷", "-", "=", "|", "<", ">", "≤", "≥", "≠"]);
+
+function wrapIfMrow(node, content) {
+  if (node.localName === "mrow") {
+    return `(${content})`;
+  }
+  return content; // ✅ fallback for non-mrow
+}
+
+function normalizeMo(node) {
+  const text = node.textContent?.trim() || "";
+
+  // Parentheses → keep them as-is
+  if (text === "(" || text === ")") {
+    return text;
+  }
+
+  // Absolute value bars → special case
+  if (text === "|") {
+    return "|";
+  }
+
+  // Everything else → just return
+  return text;
+}
 
 function hasOperators(node) {
   return node?.nodeName === "mrow" && Array.from(node.childNodes).some(child => {
@@ -39,10 +65,13 @@ function handleMsup(node) {
 }
 
 function handleMsqrt(node) {
-  const inner = Array.from(node.childNodes).map(convertMathML).join(" ");
+  const children = Array.from(node.childNodes);
+  const inner = children.map(child => {
+    const converted = convertMathML(child);
+    return wrapIfMrow(child, converted);
+  }).join(" ");
   return `√${inner}`;
 }
-
 
 function handleMroot(node) {
   // Get only element children
@@ -53,20 +82,21 @@ function handleMroot(node) {
     const base = convertMathML(elements[0]);
     const index = convertMathML(elements[1]).trim();
 
-    const superscripts = {
-      "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
-      "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"
-    };
-
-    // Decide format based on single or multiple digits
-    if (/^\d$/.test(index)) {
-      // Single digit → superscript
-      const sup = superscripts[index] || index;
-      return `${sup}√(${base})`;
-    } else {
-      // Multi-digit → plain text with "th root of"
-      return `${index}th root of (${base})`;
+    // Handle ordinal endings (1st, 2nd, 3rd, 4th, etc.)
+    function ordinal(n) {
+      const num = parseInt(n, 10);
+      if (isNaN(num)) return `${n}th`; // fallback if it's not numeric
+      const tens = num % 100;
+      if (tens >= 11 && tens <= 13) return `${num}th`;
+      switch (num % 10) {
+        case 1: return `${num}st`;
+        case 2: return `${num}nd`;
+        case 3: return `${num}rd`;
+        default: return `${num}th`;
+      }
     }
+
+    return `${ordinal(index)} root of (${base})`;
   }
   return "";
 }
@@ -106,21 +136,23 @@ function handleMenclose(node) {
 
 function handleMover(node) {
   const children = Array.from(node.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE);
-  const base = children[0] ? convertMathML(children[0]) : "";
-  const over = children[1] ? convertMathML(children[1]) : "";
+  const base = children[0] ? wrapIfMrow(children[0], convertMathML(children[0])) : "";
+  const over = children[1] ? wrapIfMrow(children[1], convertMathML(children[1])) : "";
 
-  return `${base} (${over} above)`;
+  return `${base} over ${over}`;
 }
 
 function handleMunder(node) {
-  const base = convertMathML(node.childNodes[0]);
-  const under = convertMathML(node.childNodes[1]);
+  const baseNode = node.childNodes[0];
+  const underNode = node.childNodes[1];
+
+  const base = baseNode ? wrapIfMrow(baseNode, convertMathML(baseNode)) : "";
+  const under = underNode ? wrapIfMrow(underNode, convertMathML(underNode)) : "";
 
   if (under.replace(/_/g, "").trim() === "") {
     return base;
   }
-
-  return `${base} [under: ${under}]`;
+  return `${base} under ${under}`;
 }
 
 function handleMtable(node) {
@@ -160,17 +192,23 @@ function handleMfenced(node) {
   return `${open}${inner}${close}`;
 }
 
-function handleMo(node) {
-  const text = node.textContent.trim();
-
-  // Ignore invisible times (U+2062)
-  if (text === "\u2062") return "";
-
-  return moSpacedSymbols.has(text) ? `${text}` : text;
-}
-
 function getMathToken(node) {
   return node.textContent.trim();
+}
+
+function isStructuralMo(node) {
+  if (node.nodeName !== "mo") return false;
+  const text = node.textContent?.trim();
+  if (text === "\u2062") return true; 
+  return structuralMoSymbols.has(text);
+}
+
+// Handle <mo> elements
+function handleMo(node) {
+  if (isStructuralMo(node)) {
+    return node.textContent.trim();
+  }
+  return getMathToken(node);
 }
 
 function handleMathGroup(node) {
@@ -180,25 +218,21 @@ function handleMathGroup(node) {
   for (let i = 0; i < children.length; i++) {
     const current = children[i];
     const next = children[i + 1];
-
     result += current;
 
-    if (!next) continue; // nothing after this
+    if (!next) continue;
 
     const currentTrim = current.trim();
     const nextTrim = next.trim();
 
-    const currentEndsWithOp = /[+\-×÷=()|<>≤≥≠]$/.test(currentTrim);
-    const nextStartsWithOp = /^[+\-×÷=()|<>≤≥≠]/.test(nextTrim);
+    // 🚫 No space just inside parentheses or absolute bars
+    if ((currentTrim === "(") || (nextTrim === ")") ||
+      (currentTrim === "|") || (nextTrim === "|")) {
+      continue;
+    }
 
-    // ✅ Simple rule: insert space only if operator or bracket boundaries
-    if (currentEndsWithOp || nextStartsWithOp) {
-      result += " ";
-    }
-    // Else: add space for readability
-    else {
-      result += " ";
-    }
+    // ✅ Otherwise insert space if operator boundaries or for readability
+    result += " ";
   }
   return result.trim();
 }
@@ -217,7 +251,7 @@ function preprocessMathML(raw) {
     .replace(/&amp;/g, '&');
 }
 
-export function convertMathML(node) {
+function convertMathML(node) {
   console.log("🔧 Converting:", node);
   if (!node.localName) {
     return node.textContent?.trim() || "";
@@ -294,3 +328,4 @@ export function convertMathML(node) {
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
 
+export { convertMathML };
