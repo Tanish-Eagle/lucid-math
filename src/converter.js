@@ -199,7 +199,7 @@ function getMathToken(node) {
 function isStructuralMo(node) {
   if (node.nodeName !== "mo") return false;
   const text = node.textContent?.trim();
-  if (text === "\u2062") return true; 
+  if (text === "\u2062") return true;
   return structuralMoSymbols.has(text);
 }
 
@@ -314,6 +314,9 @@ function convertMathML(node) {
 
     case "mspace":
     case "mphantom":
+    case "annotation":
+    case "annotation-xml":
+    case "mpad":
       return handleVisualTags();
 
     case "mover":
