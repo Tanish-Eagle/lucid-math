@@ -267,6 +267,7 @@ function convertMathML(node) {
     case "mn":
     case "mi":
     case "mtext":
+    case "ms":
       return getMathToken(node);
 
     case "mo":
