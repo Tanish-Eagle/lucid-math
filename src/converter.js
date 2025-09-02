@@ -64,6 +64,39 @@ function handleMsup(node) {
   return `${base}^${exp}`;
 }
 
+function handleMsub(node) {
+  // Only keep element children (ignore whitespace text nodes)
+  const elements = Array.from(node.childNodes).filter(
+    n => n.nodeType === Node.ELEMENT_NODE
+  );
+
+  if (elements.length !== 2) {
+    console.warn("⚠️ <msub> does not have exactly 2 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const sub = convertMathML(elements[1]);
+  return `${base}_${sub}`; // or `${base}_(${sub})`
+}
+
+function handleMsubsup(node) {
+  // Get only element children (ignore whitespace/text nodes)
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length !== 3) {
+    console.warn("⚠️ <msubsup> does not have exactly 3 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const sub = convertMathML(elements[1]);
+  const sup = convertMathML(elements[2]);
+
+  return `${base}_${sub}^${sup}`;
+}
+
 function handleMsqrt(node) {
   const children = Array.from(node.childNodes);
   const inner = children.map(child => {
@@ -322,7 +355,10 @@ function convertMathML(node) {
 
     case "mover":
       return handleMover(node);
-
+    case "msub":
+      return handleMsub(node);
+    case "msubsup":
+      return handleMsubsup(node);
     default:
       return `[Unsupported tag: ${tag}]`;
   }
