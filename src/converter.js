@@ -188,6 +188,24 @@ function handleMunder(node) {
   return `${base} under ${under}`;
 }
 
+function handleMunderover(node) {
+  // keep only element children (ignore whitespace text nodes)
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length !== 3) {
+    console.warn("⚠️ <munderover> does not have exactly 3 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const under = convertMathML(elements[1]);
+  const over = convertMathML(elements[2]);
+
+  // convention: base with _() for under, ^() for over
+  return `${base}_(${under})^(${over})`;
+}
+
 function handleMtable(node) {
   return Array.from(node.children)
     .map(convertMathML)
@@ -264,7 +282,7 @@ function handleMathGroup(node) {
       continue;
     }
 
-    // ✅ Otherwise insert space if operator boundaries or for readability
+     // Otherwise insert space if operator boundaries or for readability
     result += " ";
   }
   return result.trim();
@@ -359,6 +377,8 @@ function convertMathML(node) {
       return handleMsub(node);
     case "msubsup":
       return handleMsubsup(node);
+    case "munderover":
+      return handleMunderover(node);
     default:
       return `[Unsupported tag: ${tag}]`;
   }
@@ -368,4 +388,4 @@ function convertMathML(node) {
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
 
-export { convertMathML };
+//export { convertMathML };
