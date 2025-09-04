@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>menclose Test</title>
+<style>
+  math {
+    font-size: 2em;
+    margin: 1em;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<!-- Simple box -->
+<math>
+  <menclose notation="box">
+    <mi>x</mi>
+  </menclose>
+</math>
+
+<!-- Circle around expression -->
+<math>
+  <menclose notation="circle">
+    <mfrac>
+      <mi>a</mi>
+      <mi>b</mi>
+    </mfrac>
+  </menclose>
+</math>
+
+<!-- Long division style -->
+<math>
+  <menclose notation="longdiv">
+    <mn>123</mn>
+  </menclose>
+</math>
+
+<!-- Radical with top-left notation -->
+<math>
+  <menclose notation="top left">
+    <mi>y</mi>
+  </menclose>
+</math>
+
+<!-- Horizontal strike -->
+<math>
+  <menclose notation="horizontalstrike">
+    <mi>z</mi>
+  </menclose>
+</math>
+
+<!-- Up-diagonal strike -->
+<math>
+  <menclose notation="updiagonalstrike">
+    <mi>w</mi>
+  </menclose>
+</math>
+
+<!-- Combined notations -->
+<math>
+  <menclose notation="circle box">
+    <msup>
+      <mi>x</mi>
+      <mn>2</mn>
+    </msup>
+  </menclose>
+</math>
+
+</body>
+</html>
