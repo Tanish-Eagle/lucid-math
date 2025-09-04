@@ -34,6 +34,46 @@ function hasOperators(node) {
   });
 }
 
+function handleMmultiscripts(node) {
+  const children = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (children.length === 0) return "";
+
+  const base = convertMathML(children[0]);
+
+  // Split into before and after <mprescripts/>
+  const prescriptIndex = children.findIndex(el => el.tagName === "mprescripts");
+  const postChildren = prescriptIndex === -1 ? children.slice(1) : children.slice(1, prescriptIndex);
+  const preChildren  = prescriptIndex === -1 ? [] : children.slice(prescriptIndex + 1);
+
+  // Helper to format sub/sup pairs
+  function formatPairs(elems) {
+    const pairs = [];
+    for (let i = 0; i < elems.length; i += 2) {
+      const sub = elems[i] ? convertMathML(elems[i]) : "";
+      const sup = elems[i + 1] ? convertMathML(elems[i + 1]) : "";
+      if (!sub && !sup) continue;
+
+      let pair = "";
+      if (sub) pair += `_(${sub})`;
+      if (sup) pair += `^(${sup})`;
+      pairs.push(pair);
+    }
+    return pairs.join("");
+  }
+
+  const postStr = formatPairs(postChildren);
+  const preStr  = formatPairs(preChildren);
+
+  // Convention: pre-scripts go before base in square brackets
+  if (preStr) {
+    return `${preStr}[${base}]${postStr}`;
+  } else {
+    return `${base}${postStr}`;
+  }
+}
+
 function handleMfrac(node) {
   console.log("🔢 Entered <mfrac>", node.childNodes);
   const elements = Array.from(node.children);
@@ -379,6 +419,8 @@ function convertMathML(node) {
       return handleMsubsup(node);
     case "munderover":
       return handleMunderover(node);
+    case "mmultiscripts":
+      return handleMmultiscripts(node);
     default:
       return `[Unsupported tag: ${tag}]`;
   }
@@ -388,4 +430,4 @@ function convertMathML(node) {
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
 
-//export { convertMathML };
+export { convertMathML };
