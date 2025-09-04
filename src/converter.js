@@ -99,13 +99,18 @@ function handleMfrac(node) {
 }
 
 function handleMsup(node) {
-  if (node.childNodes.length !== 2) {
-    console.warn("⚠️ <msup> does not have exactly 2 children.", node);
+  const children = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (children.length !== 2) {
+    console.warn("⚠️ <msup> does not have exactly 2 element children.", node);
     return "";
   }
-  const base = convertMathML(node.childNodes[0]);
-  const exp = convertMathML(node.childNodes[1]);
-  return `${base}^${exp}`;
+
+  const base = convertMathML(children[0]);
+  const exp  = convertMathML(children[1]);
+
+  return `${base}^(${exp})`;
 }
 
 function handleMsub(node) {
