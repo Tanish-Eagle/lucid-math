@@ -34,6 +34,10 @@ function hasOperators(node) {
   });
 }
 
+function handleMprescripts(node) {
+  return "";
+}
+
 function handleMmultiscripts(node) {
   const children = Array.from(node.childNodes)
     .filter(n => n.nodeType === Node.ELEMENT_NODE);
@@ -421,6 +425,8 @@ function convertMathML(node) {
       return handleMunderover(node);
     case "mmultiscripts":
       return handleMmultiscripts(node);
+    case "mprescripts":
+      return handleMprescripts(node);
     default:
       return `[Unsupported tag: ${tag}]`;
   }
@@ -430,4 +436,4 @@ function convertMathML(node) {
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
 
-export { convertMathML };
+//export { convertMathML };
