@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>munder Test</title>
+</head>
+<body>
+<h1>munder Tag Test</h1>
+
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <munder>
+    <mo>∑</mo>
+    <mi>n=1</mi>
+  </munder>
+</math>
+
+<br>
+
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <munder>
+    <mi>x</mi>
+    <mo>_</mo> <!-- Just underscore, should be treated as empty -->
+  </munder>
+</math>
+
+<br>
+
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <munder>
+    <mo>lim</mo>
+    <mrow><mi>n</mi><mo>→</mo><mn>∞</mn></mrow>
+  </munder>
+</math>
+
+<br>
+
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <munder>
+    <mtext>Base1</mtext>
+    <mtext>Under1</mtext>
+  </munder>
+  <mo>+</mo>
+  <munder>
+    <mtext>Base2</mtext>
+    <mtext>Under2</mtext>
+  </munder>
+</math>
+
+<script>
+function convertMathML(node) {
+  if (!node) return "";
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.nodeValue;
+  }
+  const tag = node.tagName ? node.tagName.toLowerCase() : "";
+  if (tag === "munder") return handleMunder(node);
+  return Array.from(node.childNodes).map(convertMathML).join("");
+}
+
+function handleMunder(node) {
+  const base = convertMathML(node.childNodes[0]);
+  const under = node.childNodes[1] ? convertMathML(node.childNodes[1]) : "";
+  if (under.replace(/_/g, "").trim() === "") {
+    return base;
+  }
+  return `${base} [under: ${under}]`;
+}
+
+// Run test
+document.querySelectorAll("math").forEach(mathNode => {
+  console.log(convertMathML(mathNode));
+});
+</script>
+
+</body>
+</html>

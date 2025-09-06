@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test munderover</title>
+  <script type="module">
+    import { convertMathML } from "./converter.js";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const mathElements = document.querySelectorAll("math");
+      console.log("🔍 Found", mathElements.length, "<math> elements.");
+
+      mathElements.forEach((el) => {
+        console.log("🔧 Converting:", el);
+        const result = convertMathML(el);
+        console.log("📐 Converted output:", result);
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>munderover Test</h1>
+
+  <math display="block">
+    <munderover>
+      <mo>∑</mo>
+      <mrow>
+        <mi>n</mi>
+        <mo>=</mo>
+        <mn>1</mn>
+      </mrow>
+      <mrow>
+        <mo>+</mo>
+        <mn>∞</mn>
+      </mrow>
+    </munderover>
+  </math>
+
+  <math display="block">
+    <munderover>
+      <mo>∏</mo>
+      <mrow>
+        <mi>i</mi>
+        <mo>=</mo>
+        <mn>1</mn>
+      </mrow>
+      <mrow>
+        <mi>N</mi>
+      </mrow>
+    </munderover>
+  </math>
+
+</body>
+</html>

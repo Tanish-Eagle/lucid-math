@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MathML msub Test</title>
+</head>
+<body>
+  <h1>MathML msub Test</h1>
+
+  <p>Simple subscript:</p>
+  <math display="block">
+    <msub>
+      <mi>X</mi>
+      <mn>1</mn>
+    </msub>
+  </math>
+
+  <p>Variable with subscript:</p>
+  <math display="block">
+    <msub>
+      <mi>a</mi>
+      <mi>i</mi>
+    </msub>
+  </math>
+
+  <p>Number with subscript:</p>
+  <math display="block">
+    <msub>
+      <mn>10</mn>
+      <mn>2</mn>
+    </msub>
+  </math>
+
+  <p>Grouped base with subscript:</p>
+  <math display="block">
+    <msub>
+      <mrow>
+        <mi>x</mi>
+        <mo>+</mo>
+        <mi>y</mi>
+      </mrow>
+      <mn>3</mn>
+    </msub>
+  </math>
+
+  <script type="module">
+    // Import or paste your convertMathML() and handleMsub() here
+    // For demo, just log converted strings
+    function convertMathML(node) {
+      if (!node.localName) {
+        return node.textContent?.trim() || "";
+      }
+
+      switch (node.localName) {
+        case "msub":
+          return handleMsub(node);
+        case "mi":
+        case "mn":
+          return node.textContent.trim();
+        case "mo":
+          return node.textContent.trim();
+        case "mrow":
+          return Array.from(node.childNodes).map(convertMathML).join(" ");
+        default:
+          return `[${node.localName}]`;
+      }
+    }
+
+    function handleMsub(node) {
+      if (node.childNodes.length !== 2) {
+        console.warn("⚠️ <msub> does not have exactly 2 children.", node);
+        return "";
+      }
+      const base = convertMathML(node.childNodes[0]);
+      const sub = convertMathML(node.childNodes[1]);
+      return `${base}_${sub}`;
+    }
+
+    document.querySelectorAll("math").forEach(mathEl => {
+      console.log("Converted:", convertMathML(mathEl.firstElementChild));
+    });
+  </script>
+</body>
+</html>

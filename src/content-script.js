@@ -2,13 +2,13 @@
 
 function processMathElements(root = document) {
   const mathElements = root.querySelectorAll("math:not([data-processed])");
-  console.log(`🔍 Found ${mathElements.length} new <math> elements.`);
+//  console.log(`🔍 Found ${mathElements.length} new <math> elements.`);
 
   mathElements.forEach((el) => {
     el.setAttribute("data-processed", "true");
 
     const converted = convertMathML(el).trim();
-    console.log("📐 Converted output:", JSON.stringify(converted)); // wrapped in JSON.stringify
+//    console.log("📐 Converted output:", JSON.stringify(converted)); // wrapped in JSON.stringify
 
     //    if (!converted) return;
 

@@ -14,17 +14,17 @@ function wrapIfMrow(node, content) {
 function normalizeMo(node) {
   const text = node.textContent?.trim() || "";
 
-  // Parentheses → keep them as-is
+  // Parentheses keep them as-is
   if (text === "(" || text === ")") {
     return text;
   }
 
-  // Absolute value bars → special case
+  // Absolute value bars  special case
   if (text === "|") {
     return "|";
   }
 
-  // Everything else → just return
+  // Everything else  just return
   return text;
 }
 
@@ -32,6 +32,50 @@ function hasOperators(node) {
   return node?.nodeName === "mrow" && Array.from(node.childNodes).some(child => {
     return child.nodeName === "mo" && /[+\-×÷=<>≤≥≠]/.test(child.textContent);
   });
+}
+
+function handleMprescripts(node) {
+  return "";
+}
+
+function handleMmultiscripts(node) {
+  const children = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (children.length === 0) return "";
+
+  const base = convertMathML(children[0]);
+
+  // Split into before and after <mprescripts/>
+  const prescriptIndex = children.findIndex(el => el.tagName === "mprescripts");
+  const postChildren = prescriptIndex === -1 ? children.slice(1) : children.slice(1, prescriptIndex);
+  const preChildren  = prescriptIndex === -1 ? [] : children.slice(prescriptIndex + 1);
+
+  // Helper to format sub/sup pairs
+  function formatPairs(elems) {
+    const pairs = [];
+    for (let i = 0; i < elems.length; i += 2) {
+      const sub = elems[i] ? convertMathML(elems[i]) : "";
+      const sup = elems[i + 1] ? convertMathML(elems[i + 1]) : "";
+      if (!sub && !sup) continue;
+
+      let pair = "";
+      if (sub) pair += `_(${sub})`;
+      if (sup) pair += `^(${sup})`;
+      pairs.push(pair);
+    }
+    return pairs.join("");
+  }
+
+  const postStr = formatPairs(postChildren);
+  const preStr  = formatPairs(preChildren);
+
+  // Convention: pre-scripts go before base in square brackets
+  if (preStr) {
+    return `${preStr}[${base}]${postStr}`;
+  } else {
+    return `${base}${postStr}`;
+  }
 }
 
 function handleMfrac(node) {
@@ -45,8 +89,8 @@ function handleMfrac(node) {
   const denNode = elements[1];
   const num = convertMathML(numNode);
   const den = convertMathML(denNode);
-  console.log(" ➕ Numerator:", num);
-  console.log(" ➗ Denominator:", den);
+//  console.log(" ➕ Numerator:", num);
+//  console.log(" ➗ Denominator:", den);
   const numNeedsParens = num.includes('/') || hasOperators(numNode);
   const denNeedsParens = den.includes('/') || hasOperators(denNode);
   const formattedNum = numNeedsParens ? `(${num})` : num;
@@ -55,13 +99,51 @@ function handleMfrac(node) {
 }
 
 function handleMsup(node) {
-  if (node.childNodes.length !== 2) {
-    console.warn("⚠️ <msup> does not have exactly 2 children.", node);
+  const children = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (children.length !== 2) {
+    console.warn("⚠️ <msup> does not have exactly 2 element children.", node);
     return "";
   }
-  const base = convertMathML(node.childNodes[0]);
-  const exp = convertMathML(node.childNodes[1]);
-  return `${base}^${exp}`;
+
+  const base = convertMathML(children[0]);
+  const exp  = convertMathML(children[1]);
+
+  return `${base}^(${exp})`;
+}
+
+function handleMsub(node) {
+  // Only keep element children (ignore whitespace text nodes)
+  const elements = Array.from(node.childNodes).filter(
+    n => n.nodeType === Node.ELEMENT_NODE
+  );
+
+  if (elements.length !== 2) {
+    console.warn("⚠️ <msub> does not have exactly 2 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const sub = convertMathML(elements[1]);
+  return `${base}_${sub}`; // or `${base}_(${sub})`
+}
+
+function handleMsubsup(node) {
+  // Get only element children (ignore whitespace/text nodes)
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length !== 3) {
+    console.warn("⚠️ <msubsup> does not have exactly 3 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const sub = convertMathML(elements[1]);
+  const sup = convertMathML(elements[2]);
+
+  return `${base}_${sub}^${sup}`;
 }
 
 function handleMsqrt(node) {
@@ -155,6 +237,24 @@ function handleMunder(node) {
   return `${base} under ${under}`;
 }
 
+function handleMunderover(node) {
+  // keep only element children (ignore whitespace text nodes)
+  const elements = Array.from(node.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE);
+
+  if (elements.length !== 3) {
+    console.warn("⚠️ <munderover> does not have exactly 3 element children.", node);
+    return "";
+  }
+
+  const base = convertMathML(elements[0]);
+  const under = convertMathML(elements[1]);
+  const over = convertMathML(elements[2]);
+
+  // convention: base with _() for under, ^() for over
+  return `${base}_(${under})^(${over})`;
+}
+
 function handleMtable(node) {
   return Array.from(node.children)
     .map(convertMathML)
@@ -199,7 +299,7 @@ function getMathToken(node) {
 function isStructuralMo(node) {
   if (node.nodeName !== "mo") return false;
   const text = node.textContent?.trim();
-  if (text === "\u2062") return true; 
+  if (text === "\u2062") return true;
   return structuralMoSymbols.has(text);
 }
 
@@ -225,13 +325,13 @@ function handleMathGroup(node) {
     const currentTrim = current.trim();
     const nextTrim = next.trim();
 
-    // 🚫 No space just inside parentheses or absolute bars
+    // No space just inside parentheses or absolute bars
     if ((currentTrim === "(") || (nextTrim === ")") ||
       (currentTrim === "|") || (nextTrim === "|")) {
       continue;
     }
 
-    // ✅ Otherwise insert space if operator boundaries or for readability
+     // Otherwise insert space if operator boundaries or for readability
     result += " ";
   }
   return result.trim();
@@ -252,7 +352,7 @@ function preprocessMathML(raw) {
 }
 
 function convertMathML(node) {
-  console.log("🔧 Converting:", node);
+//  console.log("🔧 Converting:", node);
   if (!node.localName) {
     return node.textContent?.trim() || "";
   }
@@ -267,6 +367,7 @@ function convertMathML(node) {
     case "mn":
     case "mi":
     case "mtext":
+    case "ms":
       return getMathToken(node);
 
     case "mo":
@@ -314,11 +415,23 @@ function convertMathML(node) {
 
     case "mspace":
     case "mphantom":
+    case "annotation":
+    case "annotation-xml":
+    case "mpad":
       return handleVisualTags();
 
     case "mover":
       return handleMover(node);
-
+    case "msub":
+      return handleMsub(node);
+    case "msubsup":
+      return handleMsubsup(node);
+    case "munderover":
+      return handleMunderover(node);
+    case "mmultiscripts":
+      return handleMmultiscripts(node);
+    case "mprescripts":
+      return handleMprescripts(node);
     default:
       return `[Unsupported tag: ${tag}]`;
   }
@@ -328,4 +441,4 @@ function convertMathML(node) {
 window.convertMathML = convertMathML;
 window.preprocessMathML = preprocessMathML;
 
-export { convertMathML };
+//export { convertMathML };
