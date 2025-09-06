@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Lucid Math",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Converts MathML content to plaintext for accessibility.",
+  "author": "Tanish Shrivastava",
+  "homepage_url": "https://github.com/Tanish-Eagle/lucid-math",
   "permissions": [],
   "content_scripts": [
     {
@@ -17,6 +19,8 @@
     }
   ],
   "icons": {
-    "48": "icon.png"
+    "48": "icon_48.png",
+    "96": "icon_96.png",
+    "128": "icon_128.png"
   }
 }

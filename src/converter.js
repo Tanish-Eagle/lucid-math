@@ -14,17 +14,17 @@ function wrapIfMrow(node, content) {
 function normalizeMo(node) {
   const text = node.textContent?.trim() || "";
 
-  // Parentheses → keep them as-is
+  // Parentheses keep them as-is
   if (text === "(" || text === ")") {
     return text;
   }
 
-  // Absolute value bars → special case
+  // Absolute value bars  special case
   if (text === "|") {
     return "|";
   }
 
-  // Everything else → just return
+  // Everything else  just return
   return text;
 }
 
@@ -89,8 +89,8 @@ function handleMfrac(node) {
   const denNode = elements[1];
   const num = convertMathML(numNode);
   const den = convertMathML(denNode);
-  console.log(" ➕ Numerator:", num);
-  console.log(" ➗ Denominator:", den);
+//  console.log(" ➕ Numerator:", num);
+//  console.log(" ➗ Denominator:", den);
   const numNeedsParens = num.includes('/') || hasOperators(numNode);
   const denNeedsParens = den.includes('/') || hasOperators(denNode);
   const formattedNum = numNeedsParens ? `(${num})` : num;
@@ -325,7 +325,7 @@ function handleMathGroup(node) {
     const currentTrim = current.trim();
     const nextTrim = next.trim();
 
-    // 🚫 No space just inside parentheses or absolute bars
+    // No space just inside parentheses or absolute bars
     if ((currentTrim === "(") || (nextTrim === ")") ||
       (currentTrim === "|") || (nextTrim === "|")) {
       continue;
@@ -352,7 +352,7 @@ function preprocessMathML(raw) {
 }
 
 function convertMathML(node) {
-  console.log("🔧 Converting:", node);
+//  console.log("🔧 Converting:", node);
   if (!node.localName) {
     return node.textContent?.trim() || "";
   }
