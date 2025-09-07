@@ -22,5 +22,13 @@
     "48": "icon_48.png",
     "96": "icon_96.png",
     "128": "icon_128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "lucid-math@example.com",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
   }
 }
