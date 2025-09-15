@@ -46,5 +46,7 @@ Lucid Math aims to give screen reader users the same freedom sighted learners ha
 
 I hope this extension helps you on your mathematical journey.
 
+You can install this extension for Firefox by going [here.](https://addons.mozilla.org/en-US/firefox/addon/lucid-math/)
+
 Happy learning, and good luck!
 

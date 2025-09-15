@@ -6,6 +6,8 @@ The original MathML remains intact. Right below it, you’ll see your result sta
 
 To get the most out of Lucid Math, you’ll want to be familiar with the symbols it uses in plaintext.
 
+To install this extension for Firefox, you can go to [this page](https://addons.mozilla.org/en-US/firefox/addon/lucid-math/) and add it in your browser.
+
 ## Plaintext Math Symbols
 
 - +, -, \*, and / represent addition, subtraction, multiplication, and division. Their Unicode variants (+, −, ×, ÷) may also appear.
