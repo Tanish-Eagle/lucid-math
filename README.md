@@ -30,6 +30,8 @@ With Lucid Math:
 
 This reduces mental load, removes the need to manually transcribe spoken math, and helps restore the natural flow of learning.
 
+If you want to learn how to use it, you can go [here.](https://github.com/Tanish-Eagle/lucid-math/blob/main/documentation/user%20guide.md)
+
 ## Tested with real resources
 
 Lucid Math has been tested extensively with:
